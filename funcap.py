@@ -45,6 +45,8 @@ from idaapi import *
 from idautils import *
 from idc import *
 
+d = None
+
 # utility functions
 
 def format_name(ea):
@@ -1896,28 +1898,49 @@ class Auto:
 # main()
 ###
 
-debugger = False
+class FuncapPluginEntry(idaapi.plugin_t):
+    flags = idaapi.PLUGIN_KEEP
+    comment = ""
 
-try:
-    (arch, bits) = get_arch()
-    debugger = True
-except TypeError:
-    print "FunCap: please select a debugger first"
+    help = "FunCap: IDA Pro script to add some useful runtime info to static analysis."
+    wanted_name = "FunCap"
+    wanted_hotkey = ""
 
+    def init(self):
+        print "FunCap initialized"
+        return idaapi.PLUGIN_KEEP
 
-if debugger:
-    try:
-        d.off()
-    except: AttributeError
+    def run(self, arg):
+        global d
+        debugger = False
+        try:
+            (arch, bits) = get_arch()
+            debugger = True
+        except TypeError:
+            idaapi.msg("FunCap: please select a debugger first\n")
+            return idaapi.PLUGIN_SKIP
 
-    if arch == 'x86':
-        d = X86CapHook()
-    elif arch == 'amd64':
-        d = AMD64CapHook()
-    elif arch == 'arm' and bits == 32:
-        d = ARMCapHook()
-    else:
-        raise "FunCap: architecture not supported"
+        if debugger:
+            idaapi.msg("FunCap: debugger selected\n")
+            try:
+                d.off()
+            except: AttributeError
 
-    a = Auto()
-    d.on()
+            if arch == 'x86':
+                d = X86CapHook()
+            elif arch == 'amd64':
+                d = AMD64CapHook()
+            elif arch == 'arm' and bits == 32:
+                d = ARMCapHook()
+            else:
+                raise "FunCap: architecture not supported"
+
+            idaapi.msg("FunCap started for " + arch + " architecture\n")
+            a = Auto()
+            d.on()
+
+    def term(self):
+        pass
+
+def PLUGIN_ENTRY():
+    return FuncapPluginEntry()
